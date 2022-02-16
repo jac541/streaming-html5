@@ -53,6 +53,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   var updateStatusFromEvent = window.red5proHandlePublisherEvent; // defined in src/template/partial/status-field-publisher.hbs
 
+  var MAX_VARIANTS = 2
+  var isTranscode = true
   var targetPublisher;
   var mediaStream;
   var mediaStreamConstraints;
@@ -60,6 +62,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   var roomName = window.query('room') || 'red5pro'; // eslint-disable-line no-unused-vars
   var streamName = window.query('streamName') || ['publisher', Math.floor(Math.random() * 0x10000).toString(16)].join('-');
   var socketEndpoint = window.query('socket') || 'localhost:8001'
+  var smToken = configuration.streamManagerAccessToken
 
   var roomField = document.getElementById('room-field');
   // eslint-disable-next-line no-unused-vars
@@ -82,6 +85,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   var packetsSent = 0;
   var frameWidth = 0;
   var frameHeight = 0;
+
+  var forceClosed = false;
+  var PACKETS_OUT_TIME_LIMIT = 5000;
+  var packetsOutTimeout = 0;
 
   const STATE_TRANSCODE = 1
   const STATE_SETUP = 2
@@ -144,8 +151,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   }
 
   const handlePostProvisions = async () => {
-    if (selectedProvisions.length < 2) {
-      showErrorAlert('Please select 2 Variants for provisioning the transcoder.')
+    if (selectedProvisions.length < MAX_VARIANTS) {
+      showErrorAlert(`Please select ${MAX_VARIANTS} Variants for provisioning the transcoder.`)
       return
     }
     const host = configuration.host
@@ -169,7 +176,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     try {
       console.log('POST', transcoderPOST)
       const payload = await window.streamManagerUtil.postTranscode(host, `live/${room}`, `${name}`, transcoderPOST, smToken)
-      console.log('PYALOAD', payload)
+      console.log('PAYLOAD', payload)
       startBroadcastWithLevel(highestLevel, room, name, framerate)
     } catch (e) {
       console.error(e)
@@ -197,6 +204,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     showErrorAlert('There seems to be an issue with broadcasting your stream. Please reload this page and join again.')
   }
 
+  function startPublishTimeout () {
+    packetsOutTimeout = setTimeout(() => {
+      clearTimeout(packetsOutTimeout)
+      // TODO: Notify something wrong.
+      notifyOfPublishFailure()
+    }, PACKETS_OUT_TIME_LIMIT)
+  }
+
   function updateStatistics (b, p, w, h) {
     statisticsField.classList.remove('hidden');
     bitrateField.innerText = b === 0 ? 'N/A' : Math.floor(b);
@@ -208,7 +223,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     bitrate = b;
     packetsSent = p;
     updateStatistics(bitrate, packetsSent, frameWidth, frameHeight);
-    if (packetsSent > 100) {
+    if (packetsSent > 200) {
+      clearTimeout(packetsOutTimeout)
       establishSocketHost(targetPublisher, roomField.value, streamNameField.value);
     }
   }
@@ -333,13 +349,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     console.log('[Red5ProPublisher] ' + event.type + '.');
     if (event.type === 'WebSocket.Message.Unhandled') {
       console.log(event);
-    } else if (event.type === red5prosdk.RTCPublisherEventTypes.MEDIA_STREAM_AVAILABLE) {
-      window.allowMediaStreamSwap(targetPublisher, targetPublisher.getOptions().mediaConstraints, document.getElementById('red5pro-publisher'));
+    } else if (event.type === 'Publisher.Connection.Closed' && !forceClosed) {
+      notifyOfPublishFailure()
     }
     updateStatusFromEvent(event);
   }
   function onPublishFail (message) {
     isPublishing = false;
+    notifyOfPublishFailure()
     console.error('[Red5ProPublisher] Publish Error :: ' + message);
   }
   function onPublishSuccess (publisher) {
@@ -400,25 +417,24 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   // eslint-disable-next-line no-unused-vars
   function updatePublishingUIOnStreamCount (streamCount) {
-    /*
     if (streamCount > 0) {
       publisherContainer.classList.remove('margin-center');
+      publisherContainer.classList.remove('publisher-container-transcoder')
     } else {
       publisherContainer.classList.add('margin-center');
+      publisherContainer.classList.add('publisher-container-transcoder')
     }
-    */
   }
 
   function establishSocketHost (publisher, roomName, streamName) {
     if (hostSocket) return
-    var wsProtocol = isSecure ? 'wss' : 'ws'
+    var wsProtocol = socketEndpoint.match(/localhost/) ? 'ws' : 'wss'
     var url = `${wsProtocol}://${socketEndpoint}?room=${roomName}&streamName=${streamName}`
     hostSocket = new WebSocket(url)
     hostSocket.onmessage = function (message) {
       var payload = JSON.parse(message.data)
       if (roomName === payload.room) {
-        streamsList = payload.streams
-        processStreams(streamsList, streamName);
+        processStreams(payload.streams, streamsList, roomName, streamName);
       }
     }
   }
@@ -431,57 +447,66 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     return undefined
   }
 
-  function determinePublisher (jsonResponse) {
-    var host = jsonResponse.serverAddress;
-    var app = jsonResponse.scope;
-    var config = Object.assign({}, configuration);
-    var connectParams = Object.assign({}, getAuthenticationParams(), {
-      host: host,
-      app: app
-    });
-    var rtcConfig = Object.assign({}, config, {
-                      protocol: getSocketLocationFromProtocol().protocol,
-                      port: getSocketLocationFromProtocol().port,
-                      streamName: streamName,
-                      app: configuration.proxy,
-                      connectionParams: connectParams,
-                      streamMode: configuration.recordBroadcast ? 'record' : 'live',
-                      bandwidth: {
-                        video: 256
-                      },
-                      mediaConstraints: {
-                        audio: true,
-                        video: {
-                          width: {
-                            exact: 320
-                          },
-                          height: {
-                            exact: 240
-                          },
-                          frameRate: {
-                            exact: 15
-                          }
-                        }
-                      }
-                   });
-
-    var publisher = new red5prosdk.RTCPublisher();
-    return publisher.init(rtcConfig);
-
+  function getUserMediaConfiguration () {
+    return {
+      mediaConstraints: {
+        audio: configuration.useAudio ? configuration.mediaConstraints.audio : false,
+        video: configuration.useVideo ? configuration.mediaConstraints.video : false
+      }
+    };
   }
 
-  function doPublish (name) {
-    targetPublisher.publish(name)
-      .then(function () {
-        onPublishSuccess(targetPublisher);
-        updateInitialMediaOnPublisher();
-      })
-      .catch(function (error) {
-        var jsonError = typeof error === 'string' ? error : JSON.stringify(error, null, 2);
-        console.error('[Red5ProPublisher] :: Error in publishing - ' + jsonError);
-        console.error(error);
-        onPublishFail(jsonError);
-       });
+  const determinePublisher = async (mediaStream, room, name, bitrate = 256) => {
+
+    let config = Object.assign({},
+      configuration,
+      {
+        streamMode: configuration.recordBroadcast ? 'record' : 'live'
+      },
+      getAuthenticationParams(),
+      getUserMediaConfiguration());
+
+    const streamNameToUse = isTranscode ? `${name}_1` : name
+    let rtcConfig = Object.assign({}, config, {
+      protocol: getSocketLocationFromProtocol().protocol,
+      port: getSocketLocationFromProtocol().port,
+      bandwidth: {
+        video: bitrate
+      },
+      app: `live/${room}`,
+      streamName: streamNameToUse
+    });
+
+    let connectionParams = rtcConfig.connectionParams ? rtcConfig.connectionParams: {}
+    const payload = await window.streamManagerUtil.getOrigin(rtcConfig.host, rtcConfig.app, name, isTranscode)
+    const { scope, serverAddress } = payload
+    rtcConfig = {...rtcConfig, ...{
+      app: 'streammanager',
+      connectionParams: {...connectionParams, ...{
+        host: serverAddress,
+        app: scope
+      }}
+    }}
+    console.log('PUBLISH', streamNameToUse, rtcConfig)
+    var publisher = new red5prosdk.RTCPublisher()
+    return await publisher.initWithStream(rtcConfig, mediaStream)
+  }
+
+  const doPublish = async (stream, room, name, bitrate = 256) => {
+    try {
+      const streamNameToUse = isTranscode ? `${name}_1` : name
+
+      targetPublisher = await determinePublisher(stream, room, name, bitrate)
+      targetPublisher.on('*', onPublisherEvent)
+      await targetPublisher.publish(streamNameToUse)
+      onPublishSuccess(targetPublisher)
+      setPublishingUI(name)
+    } catch (error) {
+      var jsonError = typeof error === 'string' ? error : JSON.stringify(error, null, 2);
+      console.error('[Red5ProPublisher] :: Error in publishing - ' + jsonError);
+      console.error(error);
+      onPublishFail(jsonError);
+    }
   }
 
   function unpublish () {
@@ -612,7 +637,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
       mediaStreamConstraints = constraints
       element.srcObject = mediaStream
-      window.allowMediaStreamSwap(element, constraints, mediaStream, (activeStream, activeConstraints) => {
+      window.allowMediaStreamSwap(element, constraints, mediaStream, MAX_VARIANTS, (activeStream, activeConstraints) => {
         mediaStream = activeStream
         mediaStreamConstraints = activeConstraints
         console.log(mediaStream, mediaStreamConstraints)
@@ -620,6 +645,42 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     } catch (e) {
       console.error(e)
     }
+  }
+
+  const startBroadcastWithLevel = async (level, room, name, framerate) => {
+    setState(STATE_IS_STARTING)
+    const element = document.querySelector('#red5pro-publisher')
+    const {
+      properties: {
+        videoWidth,
+        videoHeight,
+        videoBR
+      }
+    } = level
+    const deviceId = mediaStreamConstraints.video.deviceId.exact
+
+    const constraints = {
+      audio: true,
+      video: {
+        deviceId: { exact: deviceId },
+        width: { exact: videoWidth },
+        height: { exact: videoHeight },
+        frameRate: { exact: framerate }
+      }
+    }
+
+    let stream
+    const bitrate = videoBR / 1000
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints)
+    } catch (e) {
+      showErrorAlert(e.message.length === 0 ? e.name : e.message)
+      setState(STATE_TRANSCODE)
+      return
+    }
+    mediaStream = stream
+    element.srcObject = mediaStream
+    doPublish(mediaStream, room, name, bitrate)
   }
 
   setState(STATE_TRANSCODE)
@@ -643,17 +704,31 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   var streamsList = [];
   var subscribersEl = document.getElementById('subscribers');
-  function processStreams (streamlist, exclusion) {
-    var nonPublishers = streamlist.filter(function (name) {
+
+  function processStreams (list, previousList, roomName, exclusion) {
+    console.log('TEST', `To streams: ${list}`)
+    var nonPublishers = list.filter(function (name) {
       return name !== exclusion;
     });
-    var list = nonPublishers.filter(function (name, index, self) {
-      return (index == self.indexOf(name)) &&
-        !document.getElementById(window.getConferenceSubscriberElementId(name));
+    var existing = nonPublishers.filter((name, index, self) => {
+      return (index == self.indexOf(name) && previousList.indexOf(name) !== -1)
+    })
+    var toAdd = nonPublishers.filter(function (name, index, self) {
+      return (index == self.indexOf(name) && previousList.indexOf(name) === -1)
+    })
+    var toRemove = previousList.filter((name, index, self) => {
+      return (index == self.indexOf(name) && list.indexOf(name) === -1)
+    })
+    console.log('TEST', `To add: ${toAdd}`)
+    console.log('TEST', `To remove: ${toRemove}`)
+    window.ConferenceSubscriberUtil.removeAll(toRemove)
+    streamsList = list
+
+    let lastIndex = existing.length
+    var subscribers = toAdd.map(function (name, index) {
+      return new window.ConferenceSubscriberItem(name, subscribersEl, index, () => {});
     });
-    var subscribers = list.map(function (name, index) {
-      return new window.ConferenceSubscriberItem(name, subscribersEl, index);
-    });
+
     var i, length = subscribers.length - 1;
     var sub;
     for(i = 0; i < length; i++) {
@@ -662,15 +737,17 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
     if (subscribers.length > 0) {
       var baseSubscriberConfig = Object.assign({},
-                                  configuration,
-                                  {
-                                    protocol: getSocketLocationFromProtocol().protocol,
-                                    port: getSocketLocationFromProtocol().port
-                                  },
-                                  getAuthenticationParams());
-      subscribers[0].execute(baseSubscriberConfig, serverSettings, configuration.proxy, getRegionIfDefined());
+        configuration,
+        {
+          protocol: getSocketLocationFromProtocol().protocol,
+          port: getSocketLocationFromProtocol().port
+        },
+        getAuthenticationParams(), 
+        {
+          app: `live/${roomName}`
+        });
+      subscribers[0].execute(baseSubscriberConfig, MAX_VARIANTS);
     }
-
     updatePublishingUIOnStreamCount(nonPublishers.length);
   }
 

@@ -26,6 +26,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 (function (window, navigator, red5prosdk) { // eslint-disable-line no-unused-vars
   'use strict';
 
+  var MAX_VARIANTS = 2
   var isTranscode = true
 
   var callback;
@@ -51,7 +52,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const onTranscodeSelect = el => {
     const id = parseInt(el.currentTarget.value, 10)
     if (el.currentTarget.checked) {
-      if (selectedResolutions.length === 2) {
+      if (selectedResolutions.length === MAX_VARIANTS) {
         const reject = selectedResolutions.pop()
         document.querySelector(`input[value="${hd.findIndex(o => o === reject)}"]`).checked = false
       }
@@ -293,8 +294,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   }
 
   var hasBegunMonitor = false;
-  window.allowMediaStreamSwap = function (viewElement, constraints, mediaStream, callback) {
+  window.allowMediaStreamSwap = function (viewElement, constraints, mediaStream, maxVariants, callback) {
     if (hasBegunMonitor) return;
+    MAX_VARIANTS = maxVariants
     hasBegunMonitor = true;
     callback = callback;
     mediaConstraints = constraints;
