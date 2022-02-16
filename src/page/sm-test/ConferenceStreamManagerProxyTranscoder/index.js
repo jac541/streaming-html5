@@ -363,12 +363,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     isPublishing = true;
     window.red5propublisher = publisher;
     console.log('[Red5ProPublisher] Publish Complete.');
-    // [NOTE] Moving SO setup until Package Sent amount is sufficient.
-    //    establishSharedObject(publisher, roomField.value, streamNameField.value);
-    if (publisher.getType().toUpperCase() !== 'RTC') {
-      // It's flash, let it go.
-      establishSocketHost(publisher, roomField.value, streamNameField.value);
-    }
+    // [NOTE] Moving setup until Package Sent amount is sufficient.
     try {
       var pc = publisher.getPeerConnection();
       var stream = publisher.getMediaStream();
@@ -527,95 +522,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         });
     });
   }
-
-  function requestOrigin (configuration) {
-    var host = configuration.host;
-    var app = configuration.app;
-    // TODO: Switch this back!
-    var port = 5080//serverSettings.httpport;
-    var baseUrl = protocol + '://' + host + ':' + port;
-    var apiVersion = configuration.streamManagerAPI || '4.0';
-    var region = getRegionIfDefined();
-    var url = baseUrl + '/streammanager/api/' + apiVersion + '/event/' + app + '/' + streamName + '?action=broadcast';
-    if (region) {
-      url += '&region=' + region;
-    }
-      return new Promise(function (resolve, reject) {
-        fetch(url)
-          .then(function (res) {
-            if(res.status == 200){
-                if (res.headers.get("content-type") && res.headers.get("content-type").toLowerCase().indexOf("application/json") >= 0) {
-                    return res.json();
-                }
-                else {
-                  throw new TypeError('Could not properly parse response.');
-                }
-            } else {
-              var msg = "";
-              if(res.status == 400) {
-                msg = "An invalid request was detected";
-              } else if(res.status == 404) {
-                msg = "Data for the request could not be located/provided.";
-              } else if(res.status == 500) {
-                msg = "Improper server state error was detected.";
-              } else {
-                msg = "Unknown error";
-              }
-              throw new TypeError(msg);
-            }
-          })
-          .then(function (json) {
-            resolve(json);
-          })
-          .catch(function (error) {
-            var jsonError = typeof error === 'string' ? error : JSON.stringify(error, null, 2)
-            console.error('[PublisherStreamManagerTest] :: Error - Could not request Origin IP from Stream Manager. ' + jsonError)
-            reject(error)
-          });
-    });
-  }
-
-  var retryCount = 0;
-  var retryLimit = 3;
-  function respondToOrigin (response) {
-    determinePublisher(response)
-      .then(function (publisherImpl) {
-        targetPublisher = publisherImpl;
-        targetPublisher.on('*', onPublisherEvent);
-        return targetPublisher.preview();
-      })
-      .catch(function (error) {
-        var jsonError = typeof error === 'string' ? error : JSON.stringify(error, null, 2);
-        console.error('[Red5ProPublisher] :: Error in access of Origin IP: ' + jsonError);
-        updateStatusFromEvent({
-          type: red5prosdk.PublisherEventTypes.CONNECT_FAILURE
-        });
-        onPublishFail(jsonError);
-      });
-  }
-
-  function respondToOriginFailure (error) {
-    if (retryCount++ < retryLimit) {
-      var retryTimer = setTimeout(function () {
-        clearTimeout(retryTimer);
-        startup();
-      }, 1000);
-    }
-    else {
-      var jsonError = typeof error === 'string' ? error : JSON.stringify(error, null, 2);
-      updateStatusFromEvent({
-        type: red5prosdk.PublisherEventTypes.CONNECT_FAILURE
-      });
-      console.error('[Red5ProPublisher] :: Retry timeout in publishing - ' + jsonError);
-    }
-  }
-
-  function startup () {
-    requestOrigin(configuration)
-      .then(respondToOrigin)
-      .catch(respondToOriginFailure);
-  }
-  // startup();
 
   const startPreview = async () => {
     const element = document.querySelector('#red5pro-publisher')
