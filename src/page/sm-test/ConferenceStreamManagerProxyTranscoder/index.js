@@ -662,7 +662,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     const constraints = {
       audio: true,
       video: {
-        deviceId: { exact: deviceId },
+        deviceId: deviceId,
         width: { exact: videoWidth },
         height: { exact: videoHeight },
         frameRate: { exact: framerate }
