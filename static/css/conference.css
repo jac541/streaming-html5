@@ -83,6 +83,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   background-size: contain;
 }
 */
+
 .publisher-container, .subscriber-container {
   width: 320px;
   background-color: #3b3b3b;
@@ -150,4 +151,65 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 .hidden {
   display: auto;
 }
+
+.publisher-container-transcoder {
+  width: 800px;
+  max-width: unset;
+}
+
+.video-holder {
+  margin: 0 auto;
+}
+
+.settings-area {
+  display: flex;
+  justify-content: center;
+}
+
+.settings-label {
+  margin-right: unset;
+}
+
+.settings-input {
+  font-size: 1em;
+  height: 1.5rem;
+  padding-left: 0.8rem;
+  max-width: 240px;
+}
+
+.table {
+  width: 100%;
+}
+.table-row {
+  background-color: #fff;
+  cursor: pointer;
+}
+.table-entry {
+  padding: 10px;
+  border: 1px solid black;
+}
+.table-row-disabled {
+  background-color: #eee;
+  cursor: default;
+}
+.table-row-selected {
+  background-color: #cef0ff;
+}
+
+.alert {
+  position: absolute;
+  z-index: 10001;
+  left: 50%;
+  top: 40px;
+  background-color: #eee;
+  text-align: center;
+  padding: 20px;
+  transform: translate(-50%, 0);
+}
+
+.alert-message {
+  width: 100%;
+  padding: 10px 0 20px 0;
+}
+
 
