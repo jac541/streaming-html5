@@ -30,7 +30,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   flex-direction: row;
   justify-content: center;
   align-items: baseline;
-  flex-flow: wrap;
 }
 
 .subscribers {

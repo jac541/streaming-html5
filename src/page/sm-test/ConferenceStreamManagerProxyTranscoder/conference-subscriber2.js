@@ -240,6 +240,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     if (this.next) {
       console.log('TEST', new Date().getTime(), '[subscriber:' + this.streamName + '] next ->. ' + this.next.streamName)
       this.next.execute(this.baseConfiguration, this.variantLevel);
+      this.next = undefined
     }
   }
   SubscriberItem.prototype.reject = function (event) {
@@ -247,6 +248,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     removeLoadingIcon(this.card)
     if (this.next) {
       this.next.execute(this.baseConfiguration, this.variantLevel);
+      this.next = undefined
     }
   }
   SubscriberItem.prototype.reset = function () {
