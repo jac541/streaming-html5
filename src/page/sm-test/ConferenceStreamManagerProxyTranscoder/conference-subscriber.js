@@ -41,6 +41,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   var subscriberTemplate = '' +
         '<div class="subscriber-session">' +
           '<p class="subscriber-status-field">On hold.</p>' +
+          '<p class="centered status-field statistics-field hidden">' +
+            '<span>Bitrate: </span><span class="bitrate-field">N/A</span>.&nbsp;<span>Packets In: <span class="packets-field">N/A</span>.' +
+            '<br/>' +
+            '<span>Resolution: <span class="resolution-field">0x0</span>' +
         '</div>' +
         '<div class="video-holder">' +
           '<video autoplay controls playsinline width="100%" height="100%" class="red5pro-subscriber red5pro-media red5pro-media-background"></video>' +
@@ -157,9 +161,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     this.next = undefined;
     this.parent = parent;
     this.requestLayoutFn = requestLayoutFn
+    this.statsTicket = undefined
 
     this.card = generateNewSubscriberDOM(this.streamName, this.subscriptionId, this.parent);
     this.statusField = this.card.getElementsByClassName('subscriber-status-field')[0];
+    this.statisticsField = this.card.querySelector('.statistics-field')
     this.toggleVideoPoster = this.toggleVideoPoster.bind(this);
     this.handleAudioDecoyVolumeChange = this.handleAudioDecoyVolumeChange.bind(this);
     this.handleStreamingModeMetadata = this.handleStreamingModeMetadata.bind(this);
@@ -286,6 +292,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
       this.requestLayoutFn()
     }
+    if (this.statsTicket) {
+      window.untrackBitrate(this.statsTicket)
+      this.statsTicket = undefined
+    }
     if (this.subscriber) {
       this.subscriber.off('*', this.respond);
       this.subscriber.unsubscribe().then(cleanup).catch(cleanup);
@@ -332,12 +342,27 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       self.requestLayoutFn.call(null)
       await this.subscriber.subscribe()
       clearTimeout(this.resetTimeout)
+      this.statsTicket = window.trackBitrate(this.subscriber.getPeerConnection(), (b, p) => this.handleStats(b, p), (w, h) => this.handleResolution(w, h), true, true)
 
     } catch (error) {
       console.log('[subscriber:' + name + '] Error')
       self.reject(error)
       self.close()
     }
+  }
+
+  SubscriberItem.prototype.handleStats = function (bitrate, packets) {
+    this.statisticsField.classList.remove('hidden')
+    const bitrateField = this.statisticsField.querySelector('.bitrate-field')
+    const packetsField = this.statisticsField.querySelector('.packets-field')
+    bitrateField.innerText = Math.floor(bitrate)
+    packetsField.innerText = Math.round(packets)
+  }
+
+  SubscriberItem.prototype.handleResolution = function (width, height) {
+    this.statisticsField.classList.remove('hidden')
+    const resField = this.statisticsField.querySelector('.resolution-field')
+    resField.innerText = `${width}x${height}`
   }
 
   window.getConferenceSubscriberElementContainerId = getSubscriberElementContainerId;
