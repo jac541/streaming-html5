@@ -523,9 +523,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         {
           app: `live/${roomName}`
         });
-      subscribers.forEach(s => s.execute(baseSubscriberConfig, MAX_VARIANTS))
+      subscribers.forEach(s => s.execute(baseSubscriberConfig))
       // Below is to be used if using sequential subsciber logic explained above.
-      //      subscribers[0].execute(baseSubscriberConfig, MAX_VARIANTS);
+      //      subscribers[0].execute(baseSubscriberConfig);
     }
 
     updatePublishingUIOnStreamCount(nonPublishers.length);

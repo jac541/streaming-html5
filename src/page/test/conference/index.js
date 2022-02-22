@@ -109,7 +109,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   joinButton.addEventListener('click', function () {
     saveSettings();
-    doPublish(streamName);
+    doPublish(roomName, streamName);
     setPublishingUI(streamName);
   });
 
@@ -340,7 +340,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                             exact: 240
                           },
                           frameRate: {
-                            exact: 15
+                            ideal: 15
                           }
                         }
                       },
@@ -352,8 +352,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   }
 
-  function doPublish (name) {
-    targetPublisher.publish(name)
+  function doPublish (roomName, streamName) {
+    targetPublisher.overlayOptions({ app: `${configuration.app}/${roomName}` })
+    targetPublisher.publish(streamName)
       .then(function () {
         onPublishSuccess(targetPublisher);
         updateInitialMediaOnPublisher();
@@ -448,9 +449,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         {
           app: `live/${roomName}`
         });
-      subscribers.forEach(s => s.execute(baseSubscriberConfig, MAX_VARIANTS))
+      subscribers.forEach(s => s.execute(baseSubscriberConfig))
       // Below is to be used if using sequential subsciber logic explained above.
-      //      subscribers[0].execute(baseSubscriberConfig, MAX_VARIANTS);
+      //      subscribers[0].execute(baseSubscriberConfig);
     }
 
     updatePublishingUIOnStreamCount(nonPublishers.length);
