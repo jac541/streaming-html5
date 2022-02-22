@@ -502,21 +502,30 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     var subscribers = list.map(function (name, index) {
       return new window.ConferenceSubscriberItem(name, subscribersEl, index);
     });
+
+    // Below is a linked list to subscriber sequentially.
+    /*
     var i, length = subscribers.length - 1;
     var sub;
     for(i = 0; i < length; i++) {
       sub = subscribers[i];
       sub.next = subscribers[sub.index+1];
     }
+    */
     if (subscribers.length > 0) {
       var baseSubscriberConfig = Object.assign({},
-                                  configuration,
-                                  {
-                                    protocol: getSocketLocationFromProtocol().protocol,
-                                    port: getSocketLocationFromProtocol().port
-                                  },
-                                  getAuthenticationParams());
-      subscribers[0].execute(baseSubscriberConfig, serverSettings, configuration.proxy, getRegionIfDefined());
+        configuration,
+        {
+          protocol: getSocketLocationFromProtocol().protocol,
+          port: getSocketLocationFromProtocol().port
+        },
+        getAuthenticationParams(), 
+        {
+          app: `live/${roomName}`
+        });
+      subscribers.forEach(s => s.execute(baseSubscriberConfig, MAX_VARIANTS))
+      // Below is to be used if using sequential subsciber logic explained above.
+      //      subscribers[0].execute(baseSubscriberConfig, MAX_VARIANTS);
     }
 
     updatePublishingUIOnStreamCount(nonPublishers.length);
