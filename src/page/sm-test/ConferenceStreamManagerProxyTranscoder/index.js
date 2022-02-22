@@ -223,7 +223,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     bitrate = b;
     packetsSent = p;
     updateStatistics(bitrate, packetsSent, frameWidth, frameHeight);
-    if (packetsSent > 200) {
+    if (packetsSent > 150) {
       clearTimeout(packetsOutTimeout)
       establishSocketHost(targetPublisher, roomField.value, streamNameField.value);
     }
@@ -635,12 +635,15 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       return new window.ConferenceSubscriberItem(name, subscribersEl, index, () => {});
     });
 
+    // Below is a linked list to subscriber sequentially.
+    /*
     var i, length = subscribers.length - 1;
     var sub;
     for(i = 0; i < length; i++) {
       sub = subscribers[i];
       sub.next = subscribers[sub.index+1];
     }
+    */
     if (subscribers.length > 0) {
       var baseSubscriberConfig = Object.assign({},
         configuration,
@@ -652,7 +655,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         {
           app: `live/${roomName}`
         });
-      subscribers[0].execute(baseSubscriberConfig, MAX_VARIANTS);
+      subscribers.forEach(s => s.execute(baseSubscriberConfig, MAX_VARIANTS))
+      // Below is to be used if using sequential subsciber logic explained above.
+      //      subscribers[0].execute(baseSubscriberConfig, MAX_VARIANTS);
     }
     updatePublishingUIOnStreamCount(nonPublishers.length);
   }
