@@ -434,14 +434,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
   }
 
-  function getRegionIfDefined () {
-    var region = configuration.streamManagerRegion;
-    if (typeof region === 'string' && region.length > 0 && region !== 'undefined') {
-      return region;
-    }
-    return undefined
-  }
-
   function getUserMediaConfiguration () {
     return {
       mediaConstraints: {
