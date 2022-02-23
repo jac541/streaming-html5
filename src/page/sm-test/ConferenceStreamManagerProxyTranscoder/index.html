@@ -20,10 +20,15 @@
       {{> test-title title='Conference w/ Transcoder - Stream Manager Proxy'}}
       <div class="conference-section">
         <div id="publisher-container" class="publisher-section publisher-container publisher-container-transcoder">
-          <div class="settings-area">
-            <p>
+          <div class="settings-area" style="flex-direction: column; align-items: center;">
+            <p style="padding: 10px;">
               <label for="room-field" class="settings-label">Room:</label>
               <input id="room-field" name="room-field" class="settings-input">
+            </p>
+            <hr class="paddedHR" style="width: 100%" />
+            <p style="padding: 10px;">
+              <label for="region-field" class="settings-label">Region:</label>
+              <input id="region-field" name="region-field" class="settings-input" value="us-east-1">
             </p>
           </div>
           <div id="publisher-session" class="publisher-session hidden">

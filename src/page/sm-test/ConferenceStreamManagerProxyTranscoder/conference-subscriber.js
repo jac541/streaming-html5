@@ -153,6 +153,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     this.subscriptionId = [subStreamName, 'sub'].join('-');
     this.streamName = subStreamName
     this.variantLevel = 3
+    this.region = undefined
     this.subscriber = undefined;
     this.baseConfiguration = undefined;
     this.streamingMode = undefined;
@@ -244,7 +245,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     removeLoadingIcon(this.card)
     if (this.next) {
       console.log('TEST', new Date().getTime(), '[subscriber:' + this.streamName + '] next ->. ' + this.next.streamName)
-      this.next.execute(this.baseConfiguration, this.variantLevel);
+      this.next.execute(this.baseConfiguration, this.variantLevel, this.region);
       this.next = undefined
     }
   }
@@ -252,7 +253,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     console.error(event);
     removeLoadingIcon(this.card)
     if (this.next) {
-      this.next.execute(this.baseConfiguration, this.variantLevel);
+      this.next.execute(this.baseConfiguration, this.variantLevel, this.region);
       this.next = undefined
     }
   }
@@ -264,7 +265,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     this.resetTimeout = setTimeout(() => {
       clearTimeout(this.resetTimeout);
       console.log('TEST', '[subscriber:' + this.streamName + '] retry.')
-      this.execute(this.baseConfiguration, this.variantLevel)
+      this.execute(this.baseConfiguration, this.variantLevel, this.region)
     }, 2000)
   }
   SubscriberItem.prototype.dispose = function () {
@@ -303,13 +304,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       removeAudioSubscriberDecoy(this.streamName, this.audioDecoy);
     }
   }
-  SubscriberItem.prototype.execute = async function (config, variantLevel) {
+  SubscriberItem.prototype.execute = async function (config, variantLevel, region = undefined) {
     clearTimeout(this.resetTimeout)
     addLoadingIcon(this.card)
     this.unexpectedClose = true
 
     this.baseConfiguration = config;
     this.variantLevel = variantLevel
+    this.region = region
     var self = this;
     var name = [this.streamName, variantLevel].join('_');
     var uid = Math.floor(Math.random() * 0x10000).toString(16);
@@ -320,7 +322,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     });
 
     try {
-      const payload = await window.streamManagerUtil.getEdge(rtcConfig.host, rtcConfig.app, name)
+      const payload = await window.streamManagerUtil.getEdge(rtcConfig.host, rtcConfig.app, name, region)
       const { scope, serverAddress } = payload
       rtcConfig = {...rtcConfig, ...{
         app: 'streammanager',
