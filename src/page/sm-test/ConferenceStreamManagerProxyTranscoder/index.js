@@ -435,6 +435,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   }
 
   function getRegionIfDefined () {
+    var field = document.querySelector('#region-field')
+    if (field && field.value && field.value.length !== 0) {
+      return field.value
+    }
     var region = configuration.streamManagerRegion;
     if (typeof region === 'string' && region.length > 0 && region !== 'undefined') {
       return region;
@@ -473,7 +477,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     });
 
     let connectionParams = rtcConfig.connectionParams ? rtcConfig.connectionParams: {}
-    const payload = await window.streamManagerUtil.getOrigin(rtcConfig.host, rtcConfig.app, name, isTranscode)
+    const payload = await window.streamManagerUtil.getOrigin(rtcConfig.host, rtcConfig.app, name, isTranscode, getRegionIfDefined())
     const { scope, serverAddress } = payload
     rtcConfig = {...rtcConfig, ...{
       app: 'streammanager',
@@ -535,7 +539,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           exact: 480
         },
         frameRate: {
-          exact: 15
+          min: 15
         }
       }
     }
@@ -568,10 +572,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     const constraints = {
       audio: true,
       video: {
-        deviceId: deviceId,
+        deviceId: { exact: deviceId },
         width: { exact: videoWidth },
         height: { exact: videoHeight },
-        frameRate: { exact: framerate }
+        frameRate: { min: framerate }
       }
     }
 
@@ -651,13 +655,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           protocol: getSocketLocationFromProtocol().protocol,
           port: getSocketLocationFromProtocol().port
         },
-        getAuthenticationParams(), 
+        getAuthenticationParams(),
         {
           app: `live/${roomName}`
         });
-      subscribers.forEach(s => s.execute(baseSubscriberConfig, MAX_VARIANTS))
+      var region = getRegionIfDefined()
+      subscribers.forEach(s => s.execute(baseSubscriberConfig, MAX_VARIANTS, region))
       // Below is to be used if using sequential subsciber logic explained above.
-      //      subscribers[0].execute(baseSubscriberConfig, MAX_VARIANTS);
+      //      subscribers[0].execute(baseSubscriberConfig, MAX_VARIANTS, region);
     }
     updatePublishingUIOnStreamCount(nonPublishers.length);
   }
