@@ -229,11 +229,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     window.red5propublisher = publisher;
     console.log('[Red5ProPublisher] Publish Complete.');
     // [NOTE] Moving SO setup until Package Sent amount is sufficient.
-    //    establishSharedObject(publisher, roomField.value, streamNameField.value);
-    if (publisher.getType().toUpperCase() !== 'RTC') {
-      // It's flash, let it go.
-      establishSocketHost(publisher, roomField.value, streamNameField.value);
-    }
     try {
       var pc = publisher.getPeerConnection();
       var stream = publisher.getMediaStream();
@@ -299,8 +294,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     hostSocket.onmessage = function (message) {
       var payload = JSON.parse(message.data)
       if (roomName === payload.room) {
-        streamsList = payload.streams
-        processStreams(streamsList, streamName);
+        processStreams(payload.streams, streamsList, roomName, streamName);
       }
     }
   }
@@ -432,16 +426,24 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   var streamsList = [];
   var subscribersEl = document.getElementById('subscribers');
-  function processStreams (streamlist, exclusion) {
-    var nonPublishers = streamlist.filter(function (name) {
+  function processStreams (list, previousList, roomName, exclusion) {
+    var nonPublishers = list.filter(function (name) {
       return name !== exclusion;
     });
-    var list = nonPublishers.filter(function (name, index, self) {
-      return (index == self.indexOf(name)) &&
-        !document.getElementById(window.getConferenceSubscriberElementId(name));
-    });
-    var subscribers = list.map(function (name, index) {
-      return new window.ConferenceSubscriberItem(name, subscribersEl, index);
+    var existing = nonPublishers.filter((name, index, self) => {
+      return (index == self.indexOf(name) && previousList.indexOf(name) !== -1)
+    })
+    var toAdd = nonPublishers.filter(function (name, index, self) {
+      return (index == self.indexOf(name) && previousList.indexOf(name) === -1)
+    })
+    var toRemove = previousList.filter((name, index, self) => {
+      return (index == self.indexOf(name) && list.indexOf(name) === -1)
+    })
+    window.ConferenceSubscriberUtil.removeAll(toRemove)
+    streamsList = list
+
+    var subscribers = toAdd.map(function (name, index) {
+      return new window.ConferenceSubscriberItem(name, subscribersEl, index, () => {});
     });
 
     // Below is a linked list to subscriber sequentially.

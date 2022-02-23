@@ -170,7 +170,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     this.handleAudioDecoyVolumeChange = this.handleAudioDecoyVolumeChange.bind(this);
     this.handleStreamingModeMetadata = this.handleStreamingModeMetadata.bind(this);
 
-    //    console.log('TEST', 'To UNdisposeDD ' + this.streamName)
     this.resetTimout = 0
     this.disposed = false
     ConferenceSubscriberItemMap[this.streamName] = this
@@ -262,16 +261,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     if (this.disposed) return
 
     this.statusField.innerText = 'Retrying...'
-    //    console.log('TEST', 'To !!disposeDD ' + self.disposed)
     this.resetTimeout = setTimeout(() => {
       clearTimeout(this.resetTimeout);
       console.log('TEST', '[subscriber:' + this.streamName + '] retry.')
       this.execute(this.baseConfiguration, this.variantLevel)
-      // new SubscriberItem(this.streamName, this.parent, this.index, this.requestLayoutFn).execute(this.baseConfiguration, this.variantLevel)
     }, 2000)
   }
   SubscriberItem.prototype.dispose = function () {
-    //    console.log('TEST', 'To dispose ' + this.streamName)
     clearTimeout(this.resetTimeout)
     this.disposed = true
     this.close()

@@ -604,7 +604,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   var subscribersEl = document.getElementById('subscribers');
 
   function processStreams (list, previousList, roomName, exclusion) {
-    console.log('TEST', `To streams: ${list}`)
     var nonPublishers = list.filter(function (name) {
       return name !== exclusion;
     });
@@ -617,12 +616,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     var toRemove = previousList.filter((name, index, self) => {
       return (index == self.indexOf(name) && list.indexOf(name) === -1)
     })
-    console.log('TEST', `To add: ${toAdd}`)
-    console.log('TEST', `To remove: ${toRemove}`)
     window.ConferenceSubscriberUtil.removeAll(toRemove)
     streamsList = list
 
-    let lastIndex = existing.length
     var subscribers = toAdd.map(function (name, index) {
       return new window.ConferenceSubscriberItem(name, subscribersEl, index, () => {});
     });
