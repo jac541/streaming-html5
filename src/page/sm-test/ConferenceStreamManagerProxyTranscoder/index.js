@@ -527,7 +527,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           exact: 480
         },
         frameRate: {
-          ideal: 15
+          min: 15
         }
       }
     }
@@ -563,7 +563,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         deviceId: deviceId,
         width: { exact: videoWidth },
         height: { exact: videoHeight },
-        frameRate: { exact: framerate }
+        frameRate: { min: framerate }
       }
     }
 
