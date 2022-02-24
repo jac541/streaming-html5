@@ -577,8 +577,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       video: {
         deviceId: { exact: deviceId },
         width: { exact: videoWidth },
-        height: { exact: videoHeight },
-        frameRate: { min: framerate }
+        height: { exact: videoHeight }
+        //        frameRate: { min: framerate }
       }
     }
 

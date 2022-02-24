@@ -131,7 +131,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           video: {
             width: { exact: dim.width },
             height: { exact: dim.height },
-            frameRate: { min: dim.frameRate },
+            //            frameRate: { min: dim.frameRate },
             deviceId: { exact: deviceId }
           }
         };
