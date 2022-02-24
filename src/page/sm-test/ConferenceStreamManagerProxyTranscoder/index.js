@@ -568,9 +568,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
     } = level
     const deviceId = mediaStreamConstraints.video.deviceId.exact
+    const audioId = mediaStreamConstraints.audio.deviceId.exact
 
     const constraints = {
-      audio: true,
+      audio: {
+        deviceId: { exact: audioId }
+      },
       video: {
         deviceId: { exact: deviceId },
         width: { exact: videoWidth },
