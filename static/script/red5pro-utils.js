@@ -333,6 +333,29 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
   }
 
+  /**
+   * Request to force overwrite a transcode provision detailing variants.
+   */
+  const putTranscode = async (host, context, streamName, provision, smPass = '123xyz') => {
+    try {
+      const url = `https://${host}/streammanager/api/4.0/admin/event/meta/${context}/${streamName}?accessToken=${smPass}`
+      const result = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(provision)
+      })
+      const json = await result.json()
+      if (json && json.errorMessage) {
+        throw new Error(json.errorMessage)
+      }
+      return json
+    } catch (e) {
+      throw e
+    }
+  }
+
   const postProvision = async (host, provision, smPass = '123xyz') => {
     const {
       context,
@@ -372,6 +395,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     getOriginForConference: getOriginForConference,
     getEdge: getEdge,
     postTranscode: postTranscode,
+    putTranscode: putTranscode,
     postProvision: postProvision
   }
 

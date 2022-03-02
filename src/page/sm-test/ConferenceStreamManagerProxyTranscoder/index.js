@@ -181,7 +181,15 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     } catch (e) {
       console.error(e)
       if (/Provision already exists/.exec(e.message)) {
-        startBroadcastWithLevel(highestLevel, room, name, framerate)
+        // Force post for new provision.
+        try {
+          const payload = await window.streamManagerUtil.putTranscode(host, `live/${room}`, `${name}`, transcoderPOST, smToken)
+          console.log('PAYLOAD', payload)
+          startBroadcastWithLevel(highestLevel, room, name, framerate)
+        } catch (e) {
+          console.error(e)
+          showErrorAlert(e.message)
+        }
       } else {
         showErrorAlert(e.message)
       }
